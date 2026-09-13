@@ -4,7 +4,7 @@
 
 ## 项目与范围
 
-本项目是单用户、本机运行的 Codex Task Workspace。入口使用 Codex 内置浏览器面板，不修改 Codex 原生导航。技术栈为 Node.js 22.13+、TypeScript、node:sqlite、MCP 和原生 HTML/CSS/JavaScript。
+本项目是单用户、本机运行的 Codex Task Workspace。桌面入口使用 `integrations/appkit-sidecar` 的 AppKit 浮层，跟随官方 Codex 窗口并用 WKWebView 显示看板。不得修改、复制或重新签名官方 Codex，不建立第二份 Codex 配置或登录态。看板 SQLite 独立存储在 `~/Applications/Task Workspace/data`。`integrations/codex-plus` 只保留为历史实验，不得作为安装或发布路径。禁止使用 Tauri。技术栈为 Node.js 22.13+、TypeScript、node:sqlite、MCP、AppKit/WKWebView 和原生 HTML/CSS/JavaScript。
 
 当前为本机验收候选版。发布状态以 docs/readiness-audit.md 的实际证据为准；自动测试通过不代表真实宿主 Hooks、会话续接或生产部署已验收。未经要求不扩展云同步、团队协作、移动端或复杂统计。
 
@@ -37,7 +37,7 @@
 
 - 依赖安装：`npm ci`；构建：`npm run build`；完整回归：`npm test`。
 - 可执行代码、schema、依赖或 CI 改动，在提交 PR 前运行相关检查和完整回归。纯文档改动检查准确性、链接和 `git diff --check`，无需机械新增测试。
-- UI 行为变更还需真实浏览器交互验收；用隔离 TASK_WORKSPACE_HOME 与独立端口，不在用户数据上注入故障。
+- UI 行为变更必须新增或更新 Playwright 端到端测试并运行 `npm run test:e2e`；用隔离 TASK_WORKSPACE_HOME 与动态端口，不在用户数据上注入故障。AppKit 窗口跟随、焦点与 WKWebView 行为再用真实桌面验收。
 - 涉及数据的修复验证备份恢复、事务失败和重开后的行为。运维命令见 docs/local-operations.md。
 - 只对观察到的结果作出结论；报告通过项、未验证项和阻塞项。必要时更新审计与操作文档。
 - 不提交 node_modules、dist、.data、SQLite/WAL、凭据、日志或真实会话数据。推送前检查暂存文件和敏感信息。

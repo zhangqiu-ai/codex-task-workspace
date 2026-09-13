@@ -36,6 +36,10 @@ if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href){
      let closing=false;
      const close=()=>{if(closing)return;closing=true;const deadline=setTimeout(()=>server.closeAllConnections(),5000);deadline.unref();server.close(()=>{clearTimeout(deadline);activeStore.close();process.exit(0);});};
      process.on('SIGINT',close);process.on('SIGTERM',close);
+     // Packaged desktop owns an IPC pipe; close even if its parent crashes.
+     process.on('disconnect',close);process.channel?.unref();
+     // The AppKit sidecar owns stdin. EOF means its parent exited or closed.
+     if(process.env.TASK_WORKSPACE_PARENT_STDIN==='1'){process.stdin.resume();process.stdin.on('end',close);process.stdin.on('error',close);}
      server.listen(port,'127.0.0.1',()=>console.log(`Task Workspace: http://127.0.0.1:${(server.address() as {port:number}).port}`));
    }catch(error){store?.close();console.error(`Task Workspace: ${error instanceof Error?error.message:'Startup failed'}`);process.exitCode=1;}
  }

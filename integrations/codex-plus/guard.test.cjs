@@ -1,0 +1,5 @@
+const test=require('node:test'),assert=require('node:assert/strict'),vm=require('node:vm'),fs=require('node:fs'),path=require('node:path');
+const source=fs.readFileSync(path.join(__dirname,'guard.cjs'),'utf8');
+function run(env){const context={__dirname:'/managed/Workspace Codex.app/Contents/Resources/app.asar/.vite/build',process:{env},require:n=>n==='node:fs'?{readFileSync:p=>{assert.equal(p,'/managed/Workspace Codex.app/Contents/Resources/workspace-host-paths');return '/original/codex\n/original/profile\n/original/app\n';}}:require(n)};vm.runInNewContext(source,context);return env;}
+test('shared profile selected by native launcher remains unchanged',()=>{const env={WORKSPACE_SHARED_PROFILE_READY:'1',CODEX_HOME:'/original/codex',CODEX_ELECTRON_USER_DATA_PATH:'/original/profile'};assert.equal(run(env),env);});
+test('direct main entry or alternate profile is refused',()=>{assert.throws(()=>run({}),/managed launcher/);assert.throws(()=>run({WORKSPACE_SHARED_PROFILE_READY:'1',CODEX_HOME:'/other'}),/managed launcher/);});

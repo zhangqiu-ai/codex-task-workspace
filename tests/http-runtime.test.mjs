@@ -51,8 +51,8 @@ import {spawn} from 'node:child_process';
 import {mkdtempSync,existsSync,rmSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
-function launch(t,home,port='0'){
-  const child=spawn(process.execPath,['dist/http.js'],{env:{...process.env,TASK_WORKSPACE_HOME:home,PORT:String(port),NODE_NO_WARNINGS:'1'},stdio:['ignore','pipe','pipe']});
+function launch(t,home,port='0',ipc=false,parentStdin=false){
+  const child=spawn(process.execPath,['dist/http.js'],{env:{...process.env,TASK_WORKSPACE_HOME:home,PORT:String(port),NODE_NO_WARNINGS:'1',...(parentStdin?{TASK_WORKSPACE_PARENT_STDIN:'1'}:{})},stdio:ipc?['ignore','pipe','pipe','ipc']:[parentStdin?'pipe':'ignore','pipe','pipe']});
   let output='',errors='';child.stdout.on('data',chunk=>output+=chunk);child.stderr.on('data',chunk=>errors+=chunk);
   const exited=new Promise(resolve=>child.once('exit',(code,signal)=>resolve({code,signal})));
   t.after(()=>{if(child.exitCode===null&&!child.signalCode)child.kill('SIGKILL');});
@@ -81,4 +81,13 @@ test('invalid ports do not create data and occupied ports exit with a concise di
 });
 test('request and header deadlines are bounded for a local service',()=>{
   const server=createBoardServer({});assert.equal(server.requestTimeout,15000);assert.equal(server.headersTimeout,10000);
+});
+
+test('desktop IPC disconnection shuts down the owned board service',{timeout:5000},async t=>{
+ const instance=launch(t,dataHome(t),'0',true);await instance.ready();instance.child.disconnect();
+ assert.deepEqual(await instance.exited,{code:0,signal:null});
+});
+test('sidecar stdin closure shuts down the owned board service',{timeout:5000},async t=>{
+ const instance=launch(t,dataHome(t),'0',false,true);await instance.ready();instance.child.stdin.end();
+ assert.deepEqual(await instance.exited,{code:0,signal:null});
 });
