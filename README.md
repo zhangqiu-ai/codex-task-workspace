@@ -59,3 +59,7 @@ npm start
 Continue Task 目前准备提示词，不自动打开/发送 Codex 会话；实际恢复需调用方使用受支持的宿主能力。Hook 配置依据本机 Codex 源码，尚未在安装后的真实 Codex 生命周期中验收。独立看板未接入 MCP Apps，也不会替换原生侧栏。无云同步、团队、移动端、复杂统计或历史会话抓取。
 
 SQLite 是唯一事实源；不要直接编辑生成的 Memory，也不要把其内容视为高于用户要求或 AGENTS.md 的指令。使用 `npm run backup -- /absolute/new-backup-directory` 生成在线一致快照；`npm run restore -- BACKUP NEW_DATA_DIRECTORY` 只恢复到全新目录。具体演练与升级流程见运维手册。
+
+## 开发约定
+
+Codex 和贡献者开始工作前阅读 [AGENTS.md](AGENTS.md)。日常开发使用 `feature/dev`，通过 PR 合并到 `main`，禁止直接推送 main。PR 需通过 CI；生产就绪状态仍以审计验收结果为准。
