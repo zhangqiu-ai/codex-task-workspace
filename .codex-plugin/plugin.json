@@ -1,0 +1,19 @@
+{
+  "name": "codex-task-workspace",
+  "version": "0.1.0",
+  "description": "Local task-centric workspace with SQLite memory, session links and continuation context.",
+  "author": {
+    "name": "Local developer"
+  },
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Codex Task Workspace",
+    "shortDescription": "Manage tasks, sessions and evidence-based memory locally.",
+    "longDescription": "A local Task Board with projects, Focus, Inbox, task memory, session ranking and continuation context. v0.1 development slice.",
+    "developerName": "Local developer",
+    "category": "Productivity",
+    "capabilities": [],
+    "defaultPrompt": ["Show my local tasks and help me continue an active task."]
+  },
+  "mcpServers": "./.mcp.json"
+}

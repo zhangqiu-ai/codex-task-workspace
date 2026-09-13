@@ -1,0 +1,15 @@
+import {mkdirSync,cpSync,writeFileSync,existsSync} from 'node:fs';
+import {resolve,join,dirname} from 'node:path';
+import {fileURLToPath} from 'node:url';
+import {spawnSync} from 'node:child_process';
+const source=fileURLToPath(new URL('../',import.meta.url));
+const destination=resolve(process.argv[2]||join(source,'.data','releases',`codex-task-workspace-${Date.now()}`));
+if(existsSync(destination))throw Error('Release destination must not exist');
+const run=(args,cwd)=>{const r=spawnSync('npm',args,{cwd,stdio:'inherit'});if(r.status!==0)throw Error(`npm ${args.join(' ')} failed`);};
+run(['test'],source);
+mkdirSync(dirname(destination),{recursive:true,mode:0o700});
+mkdirSync(destination,{mode:0o700});
+for(const path of ['dist','ui','hooks','skills','.codex-plugin','.mcp.json','package.json','package-lock.json','README.md','docs'])cpSync(join(source,path),join(destination,path),{recursive:true});
+run(['ci','--omit=dev','--ignore-scripts'],destination);
+writeFileSync(join(destination,'RELEASE.json'),JSON.stringify({createdAt:new Date().toISOString(),node:process.version,source,sourceTestsPassed:true,hostLifecycleVerified:false},null,2)+'\n');
+console.log(`Prepared local runtime: ${destination}\nStart: node ${join(destination,'dist/http.js')}\nDesktop lifecycle acceptance is still required.`);

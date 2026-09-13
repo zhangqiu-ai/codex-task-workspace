@@ -1,0 +1,15 @@
+CREATE TABLE IF NOT EXISTS schema_version(version INTEGER PRIMARY KEY);
+INSERT OR IGNORE INTO schema_version VALUES(1);
+CREATE TABLE IF NOT EXISTS workspaces(id TEXT PRIMARY KEY, name TEXT NOT NULL, active_task_id TEXT REFERENCES tasks(id));
+CREATE TABLE IF NOT EXISTS projects(id TEXT PRIMARY KEY, workspace_id TEXT NOT NULL REFERENCES workspaces(id), name TEXT NOT NULL CHECK(length(trim(name))>0), repo_path TEXT);
+CREATE TABLE IF NOT EXISTS tasks(id TEXT PRIMARY KEY, project_id TEXT NOT NULL REFERENCES projects(id), title TEXT NOT NULL CHECK(length(trim(title))>0), status TEXT NOT NULL DEFAULT 'todo' CHECK(status IN ('todo','doing','blocked','done')), focus INTEGER NOT NULL DEFAULT 0 CHECK(focus IN(0,1)), created_at TEXT NOT NULL, updated_at TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS sessions(id TEXT PRIMARY KEY, title TEXT NOT NULL, cwd TEXT, created_at TEXT NOT NULL, updated_at TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS task_sessions(task_id TEXT NOT NULL REFERENCES tasks(id), session_id TEXT PRIMARY KEY REFERENCES sessions(id), attached_at TEXT NOT NULL, UNIQUE(task_id,session_id));
+CREATE TABLE IF NOT EXISTS session_assessments(task_id TEXT NOT NULL, session_id TEXT NOT NULL, summary TEXT NOT NULL, relevance REAL NOT NULL CHECK(relevance BETWEEN 0 AND 1), implementation REAL NOT NULL CHECK(implementation BETWEEN 0 AND 1), authority REAL NOT NULL CHECK(authority BETWEEN 0 AND 1), actionability REAL NOT NULL CHECK(actionability BETWEEN 0 AND 1), superseded INTEGER NOT NULL CHECK(superseded IN(0,1)), evidence TEXT NOT NULL, updated_at TEXT NOT NULL, PRIMARY KEY(task_id,session_id), FOREIGN KEY(task_id,session_id) REFERENCES task_sessions(task_id,session_id) ON DELETE CASCADE);
+CREATE TABLE IF NOT EXISTS memory_facts(id TEXT PRIMARY KEY, project_id TEXT REFERENCES projects(id), task_id TEXT REFERENCES tasks(id), kind TEXT NOT NULL CHECK(kind IN('state','decision','next_action','issue')), content TEXT NOT NULL, evidence TEXT NOT NULL, authority TEXT NOT NULL CHECK(authority IN('user','verified_code','test_result','ai_inference')), confidence REAL NOT NULL CHECK(confidence BETWEEN 0 AND 1), status TEXT NOT NULL DEFAULT 'active' CHECK(status IN('active','superseded')), superseded_by TEXT REFERENCES memory_facts(id), created_at TEXT NOT NULL, CHECK((project_id IS NULL) != (task_id IS NULL)));
+CREATE TABLE IF NOT EXISTS git_links(id TEXT PRIMARY KEY, task_id TEXT NOT NULL REFERENCES tasks(id), session_id TEXT REFERENCES sessions(id), repo_path TEXT NOT NULL, branch TEXT NOT NULL, commit_sha TEXT, created_at TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS hook_events(event_id TEXT PRIMARY KEY, event_name TEXT NOT NULL CHECK(event_name IN('SessionStart','Stop','SessionEnd')), session_id TEXT NOT NULL REFERENCES sessions(id), occurred_at TEXT NOT NULL, received_at TEXT NOT NULL);
+CREATE INDEX IF NOT EXISTS tasks_project ON tasks(project_id);
+CREATE INDEX IF NOT EXISTS memory_task ON memory_facts(task_id,status);
+CREATE INDEX IF NOT EXISTS memory_project ON memory_facts(project_id,status);
+PRAGMA user_version = 1;

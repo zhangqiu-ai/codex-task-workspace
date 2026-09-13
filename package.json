@@ -1,0 +1,26 @@
+{
+  "name": "codex-task-workspace",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "scripts": {
+    "build": "tsc && cp src/schema.sql dist/schema.sql",
+    "test": "npm run build && node --test tests/*.test.mjs",
+    "start": "node dist/http.js",
+    "mcp": "node dist/mcp.js",
+    "doctor": "node dist/maintenance.js doctor",
+    "backup": "node dist/maintenance.js backup",
+    "restore": "node dist/maintenance.js restore"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "zod": "^3.25.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.0",
+    "@types/node": "^22.0.0"
+  }
+}

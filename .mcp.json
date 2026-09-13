@@ -1,0 +1,1 @@
+{"mcpServers":{"task-workspace":{"command":"node","args":["${PLUGIN_ROOT}/dist/mcp.js"]}}}
