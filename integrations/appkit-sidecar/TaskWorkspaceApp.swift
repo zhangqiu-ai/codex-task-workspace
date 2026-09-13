@@ -173,11 +173,19 @@ private final class EntryPanel: NSPanel {
         level = .floating; isOpaque = false; backgroundColor = .clear; hasShadow = false
         isReleasedWhenClosed = false
         collectionBehavior = [.fullScreenAuxiliary, .transient, .ignoresCycle]
-        let button = NSButton(title: "  工作台", target: target, action: action)
-        button.bezelStyle = .recessed; button.imagePosition = .imageLeading
+        appearance = NSAppearance(named: .aqua)
+        let accent = NSColor(calibratedRed: 0.04, green: 0.48, blue: 0.36, alpha: 1)
+        let button = NSButton(title: "工作台", target: target, action: action)
+        button.isBordered = false; button.imagePosition = .imageLeading
         button.image = NSImage(systemSymbolName: "rectangle.3.group", accessibilityDescription: "Task Workspace")
+        button.image?.isTemplate = true; button.contentTintColor = accent
         button.font = .systemFont(ofSize: 14, weight: .medium)
+        button.attributedTitle = NSAttributedString(string: "工作台", attributes: [.font: button.font!, .foregroundColor: NSColor(calibratedWhite: 0.14, alpha: 1)])
         button.alignment = .left; button.translatesAutoresizingMaskIntoConstraints = false
+        button.wantsLayer = true
+        button.layer?.backgroundColor = accent.withAlphaComponent(0.13).cgColor
+        button.layer?.borderColor = accent.withAlphaComponent(0.22).cgColor
+        button.layer?.borderWidth = 0.5; button.layer?.cornerRadius = 7
         contentView = NSView(); contentView?.addSubview(button)
         NSLayoutConstraint.activate([
             button.leadingAnchor.constraint(equalTo: contentView!.leadingAnchor), button.trailingAnchor.constraint(equalTo: contentView!.trailingAnchor),
@@ -266,7 +274,7 @@ private final class AppDelegate: NSObject, NSApplicationDelegate {
         let active = NSWorkspace.shared.frontmostApplication?.bundleIdentifier
         guard active == officialBundleID || active == Bundle.main.bundleIdentifier else { entry.orderOut(nil); board.orderOut(nil); return }
         let sidebarWidth = min(252, max(210, codex.frame.width * 0.19))
-        entry.setFrame(NSRect(x: codex.frame.minX + 8, y: codex.frame.maxY - 100, width: sidebarWidth - 16, height: 34), display: true)
+        entry.setFrame(NSRect(x: codex.frame.minX, y: codex.frame.maxY - 100, width: sidebarWidth - 8, height: 34), display: true)
         entry.orderFrontRegardless()
         if boardVisible {
             board.setFrame(NSRect(x: codex.frame.minX + sidebarWidth, y: codex.frame.minY, width: codex.frame.width - sidebarWidth, height: codex.frame.height), display: true)
