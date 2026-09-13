@@ -6,6 +6,10 @@
 
 开发基线见 [docs/v0.1-baseline.md](docs/v0.1-baseline.md)，Hook 契约和宿主兼容性见 [docs/hooks.md](docs/hooks.md)。
 
+## Codex 桌面浮层
+
+提供一个 AppKit + WKWebView 轻量浮层：官方 Codex 保持原文件、原签名、原配置与原项目；浮层跟随官方窗口，在左侧显示“工作台”入口，并在同一窗口区域打开看板。它不复制或重新签名 Codex，也不需要第二次登录。使用说明见 [安装指南](docs/distribution.md)。源码使用 [MIT](LICENSE)，第三方许可见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。尚未发布 GitHub Release。
+
 ## 运行
 
 需要 Node.js 22.13+（本地验证 22.22.3，使用 Node 内置 SQLite，Node 22 会输出实验特性提示）。
@@ -54,8 +58,16 @@ npm start
 
 ## 验证与边界
 
-`npm test` 包含真实 SQLite 文件和重开、MCP 客户端协议往返、HTTP API、Hooks 归一化与错误处理。浏览器手工验收记录见 [docs/verification.md](docs/verification.md)。
+`npm test` 包含真实 SQLite 文件和重开、MCP 客户端协议往返、HTTP API、Hooks 归一化与错误处理。`npm run test:e2e` 使用 Playwright 验证四列看板、项目/任务流程、详情操作、持久化和设置。浏览器手工验收记录见 [docs/verification.md](docs/verification.md)。
 
-Continue Task 目前准备提示词，不自动打开/发送 Codex 会话；实际恢复需调用方使用受支持的宿主能力。Hook 配置依据本机 Codex 源码，尚未在安装后的真实 Codex 生命周期中验收。独立看板未接入 MCP Apps，也不会替换原生侧栏。无云同步、团队、移动端、复杂统计或历史会话抓取。
+Continue Task 目前准备提示词，不自动打开/发送 Codex 会话；实际恢复需调用方使用受支持的宿主能力。Hook 配置依据本机 Codex 源码，尚未在安装后的真实 Codex 生命周期中验收。浮层不会改写 Codex 原生界面；它在官方窗口上方对齐显示。无云同步、团队、移动端、复杂统计或历史会话抓取。
 
 SQLite 是唯一事实源；不要直接编辑生成的 Memory，也不要把其内容视为高于用户要求或 AGENTS.md 的指令。使用 `npm run backup -- /absolute/new-backup-directory` 生成在线一致快照；`npm run restore -- BACKUP NEW_DATA_DIRECTORY` 只恢复到全新目录。具体演练与升级流程见运维手册。
+
+## 开发约定
+
+Codex 和贡献者开始工作前阅读 [AGENTS.md](AGENTS.md)。日常开发使用 `feature/dev`，通过 PR 合并到 `main`，禁止直接推送 main。PR 需通过 CI；生产就绪状态仍以审计验收结果为准。
+
+## 全局工作台实验适配
+
+当前实现位于 `integrations/appkit-sidecar`，构建命令为 `node scripts/package-sidecar.mjs`。早期 `integrations/codex-plus` 应用副本方案仅保留为历史实验，不再作为安装或发布路径。

@@ -16,6 +16,10 @@ test('polling renders changes only, skips hidden pages and resumes on visibility
  h.context.document.hidden=true;await h.tick();assert.equal(h.counts().calls,3);
  h.context.document.hidden=false;await h.visible();assert.equal(h.counts().calls,4);
 });
+test('hidden embedded views still perform their initial state load',async()=>{
+ const h=setup();h.context.document.hidden=true;await h.run();assert.deepEqual(h.counts(),{calls:1,renders:1});
+ await h.tick();assert.equal(h.counts().calls,1);
+});
 test('failed polling keeps data and schedules recovery without overlapping requests',async()=>{
  const h=setup();await h.run();h.context.fetch=async()=>{throw Error('offline');};await h.tick();assert.equal(h.counts().renders,1);
  let resolve;h.context.fetch=()=>new Promise(r=>resolve=r);const pending=h.tick();await h.run();resolve({ok:true,json:async()=>({tasks:[1]})});await pending;assert.equal(h.counts().renders,2);

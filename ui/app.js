@@ -39,7 +39,7 @@ async function autoRefresh(){
  if(autoRefreshing)return;
  autoRefreshing=true;
  clearTimeout(refreshTimer);
- try{if(!document.hidden)await refresh();}catch{const notice=$('#connection-notice');localizedText(notice,state?'连接已中断，正在重试。当前显示上次读取的数据。':'无法连接本地工作区，正在重试。');notice.hidden=false;}
+ try{if(!document.hidden||!state)await refresh();}catch{const notice=$('#connection-notice');localizedText(notice,state?'连接已中断，正在重试。当前显示上次读取的数据。':'无法连接本地工作区，正在重试。');notice.hidden=false;}
  finally{autoRefreshing=false;refreshTimer=setTimeout(autoRefresh,3000);}
 }
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)autoRefresh();});

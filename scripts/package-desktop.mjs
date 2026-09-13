@@ -1,0 +1,44 @@
+import fs from 'node:fs';import path from 'node:path';import {createHash} from 'node:crypto';import {execFileSync} from 'node:child_process';import {fileURLToPath} from 'node:url';
+const repo=fileURLToPath(new URL('../',import.meta.url));
+const upstream=path.resolve(process.env.WORKSPACE_PATCHER_ROOT||'../codex-workspace-patcher');
+const pin='759b60d66b0399517cac3a2cbe815ccd7b8d5981';
+if(execFileSync('git',['rev-parse','HEAD'],{cwd:upstream,encoding:'utf8'}).trim()!==pin)throw Error('Patcher revision mismatch');
+if(execFileSync('git',['status','--porcelain','--untracked-files=no'],{cwd:upstream,encoding:'utf8'}).trim())throw Error('Patcher tracked files are modified');
+const nodeVersion='22.22.3',file=`node-v${nodeVersion}-darwin-arm64.tar.gz`,cache=path.join(repo,'.data/downloads');
+const shas=fs.readFileSync(path.join(cache,'SHASUMS256.txt'),'utf8');const expected=shas.split('\n').find(l=>l.endsWith('  '+file))?.split(' ')[0];
+const digest=p=>createHash('sha256').update(fs.readFileSync(p)).digest('hex');
+if(!expected||digest(path.join(cache,file))!==expected)throw Error('Node archive checksum mismatch');
+const out=path.resolve(process.argv[2]||path.join(repo,'.data/releases/Task-Workspace-0.1.0-preview.2-macos-arm64'));
+if(fs.existsSync(out))throw Error('Package destination already exists');
+execFileSync('npm',['test'],{cwd:repo,stdio:'inherit'});
+fs.mkdirSync(out,{recursive:true});
+const runtime=path.join(out,'runtime');fs.mkdirSync(runtime);
+for(const name of ['dist','ui','package.json','package-lock.json'])fs.cpSync(path.join(repo,name),path.join(runtime,name),{recursive:true});
+execFileSync('npm',['ci','--omit=dev','--ignore-scripts'],{cwd:runtime,stdio:'inherit'});
+execFileSync('/usr/bin/clang',['-Os','-Wall','-Werror','-arch','arm64','-framework','CoreFoundation',path.join(repo,'integrations/codex-plus/launcher.c'),'-o',path.join(runtime,'workspace-launcher')]);
+const unpack=path.join(out,'.node-unpack');fs.mkdirSync(unpack);
+execFileSync('tar',['-xzf',path.join(cache,file),'-C',unpack]);
+const nodeRoot=path.join(unpack,`node-v${nodeVersion}-darwin-arm64`);
+fs.copyFileSync(path.join(nodeRoot,'bin/node'),path.join(runtime,'node'));fs.chmodSync(path.join(runtime,'node'),0o755);
+fs.copyFileSync(path.join(nodeRoot,'LICENSE'),path.join(out,'NODE-LICENSE'));fs.rmSync(unpack,{recursive:true});
+const adapter=path.join(out,'integrations/codex-plus');fs.mkdirSync(adapter,{recursive:true});
+for(const name of ['installer.cjs','patch.cjs','guard.cjs','host.cjs','page.js','service.cjs'])fs.copyFileSync(path.join(repo,'integrations/codex-plus',name),path.join(adapter,name));
+const vendor=path.join(out,'patcher'),hashes={};
+for(const file of ['src/core/patch-engine.js','src/core/asar.js','src/core/app-identity.js','src/core/plist.js','src/core/source-capabilities.js','src/runtime/assets.js']){const dest=path.join(vendor,file);fs.mkdirSync(path.dirname(dest),{recursive:true});fs.copyFileSync(path.join(upstream,file),dest);hashes[file]=digest(dest);}
+fs.writeFileSync(path.join(vendor,'package.json'),JSON.stringify({private:true,type:'commonjs'})+'\n');
+fs.copyFileSync(path.join(upstream,'LICENSE'),path.join(vendor,'LICENSE'));fs.writeFileSync(path.join(vendor,'PINNED_REVISION'),pin+'\n');fs.writeFileSync(path.join(vendor,'SHA256SUMS.json'),JSON.stringify(hashes,null,2)+'\n');
+for(const file of ['LICENSE','THIRD_PARTY_NOTICES.md'])fs.copyFileSync(path.join(repo,file),path.join(out,file));
+fs.copyFileSync(path.join(repo,'docs/distribution.md'),path.join(out,'README.md'));
+const command=`#!/bin/bash\nset -e\ncd -- "$(dirname -- "$0")"\nprintf '%s\\n' 'Task Workspace — experimental macOS build' 'This creates a modified copy. Computer control is unsupported; the original app stays unchanged.' '此版本为实验版。生成独立副本，电脑控制不受支持，原版保持不变。'\nread -r -p 'Install / Update? 输入 INSTALL 或 UPDATE 继续: ' choice\ncase "$choice" in INSTALL) action=install;; UPDATE) action=update;; *) exit 0;; esac\n./runtime/node ./integrations/codex-plus/installer.cjs "$action" --patcher-root "$PWD/patcher" --runtime "$PWD/runtime"\nprintf '%s\\n' '完成。应用位于 ~/Applications/Task Workspace/Workspace Codex.app'\nread -r -p 'Press Enter to close / 回车关闭' unused\n`;
+fs.writeFileSync(path.join(out,'Install.command'),command,{mode:0o755});
+fs.writeFileSync(path.join(out,'Manage.command'),`#!/bin/bash\nset -e\ncd -- "$(dirname -- "$0")"\nread -r -p 'doctor / rollback / recover / uninstall: ' action\ncase "$action" in doctor|rollback|recover|uninstall) ./runtime/node integrations/codex-plus/installer.cjs "$action";; *) exit 0;; esac\nread -r -p 'Press Enter to close / 回车关闭' unused\n`,{mode:0o755});
+fs.writeFileSync(path.join(out,'RELEASE.json'),JSON.stringify({version:'0.1.0-preview.2',platform:'darwin-arm64',node:nodeVersion,nodeArchiveSha256:expected,patcherRevision:pin,supportedApp:'26.908.40834',build:'8881',productionReady:false,computerControlSupported:false},null,2)+'\n');
+console.log('Prepared desktop package: '+out);
+// Distribute only the generated runtime/adapter tree, never local app or data folders.
+const checks=[];
+function walk(dir){for(const name of fs.readdirSync(dir).sort()){const file=path.join(dir,name);if(fs.lstatSync(file).isDirectory())walk(file);else checks.push(digest(file)+'  '+path.relative(out,file));}}
+walk(out);fs.writeFileSync(path.join(out,'SHA256SUMS.txt'),checks.join('\n')+'\n');
+const archive=out+'.tar.gz';
+execFileSync('tar',['-czf',archive,'-C',path.dirname(out),path.basename(out)],{env:{...process.env,COPYFILE_DISABLE:'1'}});
+fs.writeFileSync(archive+'.sha256',digest(archive)+'  '+path.basename(archive)+'\n');
+console.log('Archive: '+archive);
